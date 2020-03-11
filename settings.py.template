@@ -1,0 +1,11 @@
+import os
+
+EXTRA_WHERE = os.environ.get('EXTRA_WHERE', '')
+DB_HOST = os.environ.get('PSQL_DB_HOST', '')
+DB_NAME = os.environ.get('PSQL_DB_NAME', '')
+DB_PASS = os.environ.get('PSQL_DB_PASS', '')
+DB_PORT = os.environ.get('PSQL_DB_PORT', )
+DB_SCHEMA = os.environ.get('PSQL_DB_SCHEMA', '')
+DB_USER = os.environ.get('PSQL_DB_USER', '')
+SECRET = os.environ.get('SECRET', '')
+MAX_AGE = int(os.environ.get('MAX_AGE', 2))
