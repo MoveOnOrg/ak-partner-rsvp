@@ -1,10 +1,10 @@
 # ActionKit Partner RSVP Export
 
-This is a tool to allow partners to export their own sourced RSVPs from ActionKit event campaigns. It has two parts: a static site and an API.
+This is a tool to allow partners to export their own sourced RSVPs from ActionKit event campaigns. It has two parts: a static site, with HTML and JavaScript that calls an API, and the code for that API.
 
 ## Static site
 
-The static site in the repo is MoveOn-specific. If you're using this with a different ActionKit instance, you'd of course want to change the HTML and CSS to match your organization's brand, and also edit the apiRoot value at the top of static/index.js.
+The static HTML in the repo is MoveOn-specific. If you're using this with a different ActionKit instance, you'd of course want to change the HTML and CSS to match your organization's brand, and also edit the apiRoot value at the top of static/index.js.
 
 ### Deploy
 
