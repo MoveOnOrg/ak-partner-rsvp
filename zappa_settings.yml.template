@@ -1,0 +1,37 @@
+---
+validate:
+  apigateway_enabled: false
+  # We're using a single API gateway for multiple Lambdas here. Zappa can't
+  # do this, so the API gateway config is done manually.
+  aws_region: 
+  keep_warm: false
+  lambda_handler: validate_key.aws_lambda
+  memory_size: 2048
+  project_name: ak-partner-rsvp
+  role_name:
+  runtime: python3.6
+  s3_bucket:
+  timeout_seconds: 300
+  vpc_config:
+      SubnetIds:
+        -
+      SecurityGroupIds:
+        -
+export:
+  apigateway_enabled: false
+  # We're using a single API gateway for multiple Lambdas here. Zappa can't
+  # do this, so the API gateway config is done manually.
+  aws_region:
+  keep_warm: false
+  lambda_handler: export_rsvps.aws_lambda
+  memory_size: 2048
+  project_name: ak-partner-rsvp
+  role_name:
+  runtime: python3.6
+  s3_bucket:
+  timeout_seconds: 300
+  vpc_config:
+      SubnetIds:
+        -
+      SecurityGroupIds:
+        -
