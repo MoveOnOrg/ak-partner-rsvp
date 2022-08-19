@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html class="giraffe" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Event Partner Signups Export | MoveOn</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge;chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href="https://static.moveon.org/giraffe/styles/main.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.11"></script>
+    <script src="index.js"></script>
+  </head>
+  <body role="document">
+    <header id="main-header" class="giraffe header">
+      <div class="mo-container">
+        <div class="logo">
+          <img src="https://static.moveon.org/giraffe/images/logo.svg" alt="MoveOn Logo">
+        </div>
+      </div>
+    </header>
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-md-12 mb-5">
+          <div id="content-heading" class="mt-5 mb-3 row">
+            <div class="col-md-12">
+              <h1 class="text-align-center">MoveOn Event Partner Signups Export</h1>
+              <div class="mt-3">
+                <p>If you have an export key, enter it below. If you do not yet have a key, please reach out to your MoveOn contact to get one.</p>
+              </div>
+            </div>
+          </div>
+          <form
+            method="POST"
+            action="./export/"
+            id="export-form"
+            accept-charset="utf-8"
+            data-viewable="true"
+            ref="form"
+          >
+            <error-message :is-on="error" error="The key you submitted is no longer valid. Please reach out to your MoveOn contact to get an updated key."></error-message>
+            <div class="row justify-content-center ">
+              <div class="col-md-10 relative-font-color-for-bg">
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="mt-4 mr-0 override-collapse fieldtype-text label-before-input input-block">
+                      <label for="KEY">Export Key</label>
+                      <input v-model="key" type="text" name="KEY" />
+                    </div>
+                  </div>
+                </div>
+                <div class="form-section--submit buttons text-align-center mt-5">
+                  <p v-if="false">Loading...</p>
+                  <submit-button
+                    v-bind:is-disabled="key.length < 5"
+                    prompt="Export Signups"
+                    @submit-button-click="formSubmit"
+                  ></submit-button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
