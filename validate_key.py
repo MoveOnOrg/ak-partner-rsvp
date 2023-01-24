@@ -8,11 +8,10 @@ DESCRIPTION = 'Validate a download key.'
 
 ARG_DEFINITIONS = {
     'KEY': 'Key to validate.',
-    'MAX_AGE': 'Number of days a key should be considered valid.',
-    'SECRET': 'Secret to use for validation.'
+    'MAX_AGE': 'Number of days a key should be considered valid.'
 }
 
-REQUIRED_ARGS = ['KEY', 'MAX_AGE', 'SECRET']
+REQUIRED_ARGS = ['KEY', 'MAX_AGE']
 
 
 def main(args):
@@ -21,9 +20,13 @@ def main(args):
         return {'valid': False}
     [key_created, age, source, campaign, hash] = args.KEY.split('.')
     m = hashlib.sha256()
+
+    script_settings = get_secret('ak-partner-rsvp')
+    secret = script_settings['SECRET']
+
     m.update(
         (
-            '%s.%s.%s.%s.%s' % (key_created, age, source, campaign, args.SECRET)
+            '%s.%s.%s.%s.%s' % (key_created, age, source, campaign, secret)
         ).encode('utf-8')
     )
     hash_check = m.hexdigest()

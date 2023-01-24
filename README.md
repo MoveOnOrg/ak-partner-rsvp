@@ -12,7 +12,7 @@ To deploy the static site, simply put the files on any web host. At MoveOn, we u
 
 ## API
 
-The API is a Python 3.6 app designed to run on AWS Lambda. It can be used with any ActionKit instance by changing the settings to point to your ActionKit database (copy settings.py.template to settings.py). Each individual script (validate_key.py and export_rsvps.py) can also be run from the command line for testing.
+The API is a Python 3.9 app designed to run on AWS Lambda. It can be used with any ActionKit instance by changing the settings to point to your ActionKit database (copy settings.py.template to settings.py). Each individual script (validate_key.py and export_rsvps.py) can also be run from the command line for testing.
 
 ### Deploy
 
