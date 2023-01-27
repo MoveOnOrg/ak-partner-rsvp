@@ -36,25 +36,32 @@ def main(args):
             cursor_factory=psycopg2.extras.RealDictCursor
         )
 
-        query = f"""
-            SELECT
-                u.email, u.first_name, u.middle_name, u.last_name, u.state, u.city,
-                u.zip, MIN(a.created_at) AS action_datetime, MAX(s.role) AS role
-            FROM {db_schema}.core_user u
-            JOIN {db_schema}.events_eventsignup s ON s.user_id = u.id
-            JOIN {db_schema}.events_event e ON e.id = s.event_id
-            JOIN {db_schema}.events_campaign c ON c.id = e.campaign_id
-            LEFT JOIN {db_schema}.core_action a ON (
-                a.page_id = s.page_id
-                AND a.user_id = u.id
-            )
-            WHERE c.name = '{key.get('campaign', '')}'
-            {extra_where}
-            AND a.source = '{key.get('source', '')}'
-            GROUP BY 1,2,3,4,5,6,7
-        """
-
-        cursor.execute(query)
+        query = """
+        SELECT
+            u.email, u.first_name, u.middle_name, u.last_name, u.state, u.city,
+            u.zip, MIN(a.created_at) AS action_datetime, MAX(s.role) AS role
+        FROM %s.core_user u
+        JOIN %s.events_eventsignup s ON s.user_id = u.id
+        JOIN %s.events_event e ON e.id = s.event_id
+        JOIN %s.events_campaign c ON c.id = e.campaign_id
+        LEFT JOIN %s.core_action a ON (
+            a.page_id = s.page_id
+            AND a.user_id = u.id
+        )
+        WHERE c.name = %s
+        %s
+        AND a.source = %s
+        GROUP BY 1,2,3,4,5,6,7""" % (
+                    db_schema,
+                    db_schema,
+                    db_schema,
+                    db_schema,
+                    db_schema,
+                    '%s',
+                    extra_where,
+                    '%s'
+        )
+        cursor.execute(query, (key.get('campaign', ''), key.get('source', '')))
         return [dict(row) for row in cursor.fetchall()]
     else:
         return False
