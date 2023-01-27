@@ -10,20 +10,17 @@ import validate_key
 DESCRIPTION = 'Download RSVPs.'
 
 ARG_DEFINITIONS = {
-    'EXTRA_WHERE': 'Anything to add to the WHERE clause in the RSVP query.',
-    'KEY': 'Key to validate.',
-    'MAX_AGE': 'Number of days a key should be considered valid.',
+    'KEY': 'Key to validate.'
 }
 
-REQUIRED_ARGS = [
-    'KEY', 'MAX_AGE'
-]
+REQUIRED_ARGS = ['KEY']
 
 
 def main(args):
     script_settings = get_secret('ak-partner-rsvp')
     db_settings = get_secret('redshift-admin')
     db_schema = script_settings['DB_SCHEMA']
+    extra_where = script_settings['EXTRA_WHERE'] or ''
 
     key = validate_key.main(args, script_settings)
 
@@ -52,7 +49,7 @@ def main(args):
                 AND a.user_id = u.id
             )
             WHERE c.name = '{key.get('campaign', '')}'
-            {args.EXTRA_WHERE or ''}
+            {extra_where}
             AND a.source = '{key.get('source', '')}'
             GROUP BY 1,2,3,4,5,6,7
         """

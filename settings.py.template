@@ -1,4 +1,0 @@
-import os
-
-EXTRA_WHERE = os.environ.get('EXTRA_WHERE', '')
-MAX_AGE = int(os.environ.get('MAX_AGE', 2))
