@@ -22,47 +22,42 @@ REQUIRED_ARGS = [
 
 def main(args):
     script_settings = get_secret('ak-partner-rsvp')
-    db_schema = script_settings['DB_SCHEMA']
     db_settings = get_secret('redshift-admin')
+    db_schema = script_settings['DB_SCHEMA']
 
-    key = validate_key.main(args)
+    key = validate_key.main(args, script_settings)
+
     if key.get('valid', False):
         connection = psycopg2.connect(
-            host=db_settings('host'),
-            port=db_settings('port'),
-            user=db_settings('username'),
-            password=db_settings('password'),
-            database='dev'
+            host=db_settings['host'],
+            port=db_settings['port'],
+            user=db_settings['username'],
+            password=db_settings['password'],
+            database=db_settings['dbName']
         )
         cursor = connection.cursor(
             cursor_factory=psycopg2.extras.RealDictCursor
         )
-        query = """
-        SELECT
-            u.email, u.first_name, u.middle_name, u.last_name, u.state, u.city,
-            u.zip, MIN(a.created_at) AS action_datetime, MAX(s.role) AS role
-        FROM %s.core_user u
-        JOIN %s.events_eventsignup s ON s.user_id = u.id
-        JOIN %s.events_event e ON e.id = s.event_id
-        JOIN %s.events_campaign c ON c.id = e.campaign_id
-        LEFT JOIN %s.core_action a ON (
-            a.page_id = s.page_id
-            AND a.user_id = u.id
-        )
-        WHERE c.name = %s
-        %s
-        AND a.source = %s
-        GROUP BY 1,2,3,4,5,6,7""" % (
-                    db_schema,
-                    db_schema,
-                    db_schema,
-                    db_schema,
-                    db_schema,
-                    '%s',
-                    args.EXTRA_WHERE,
-                    '%s'
-        )
-        cursor.execute(query, (key.get('campaign', ''), key.get('source', '')))
+
+        query = f"""
+            SELECT
+                u.email, u.first_name, u.middle_name, u.last_name, u.state, u.city,
+                u.zip, MIN(a.created_at) AS action_datetime, MAX(s.role) AS role
+            FROM {db_schema}.core_user u
+            JOIN {db_schema}.events_eventsignup s ON s.user_id = u.id
+            JOIN {db_schema}.events_event e ON e.id = s.event_id
+            JOIN {db_schema}.events_campaign c ON c.id = e.campaign_id
+            LEFT JOIN {db_schema}.core_action a ON (
+                a.page_id = s.page_id
+                AND a.user_id = u.id
+            )
+            WHERE c.name = '{key.get('campaign', '')}'
+            {args.EXTRA_WHERE or ''}
+            AND a.source = '{key.get('source', '')}'
+            GROUP BY 1,2,3,4,5,6,7
+        """
+
+        cursor.execute(query)
         return [dict(row) for row in cursor.fetchall()]
     else:
         return False
