@@ -3,43 +3,39 @@ import hashlib
 import psycopg2
 import psycopg2.extras
 from pywell.entry_points import run_from_cli, run_from_api_gateway
+from pywell.secrets_manager import get_secret
 
 import validate_key
 
 DESCRIPTION = 'Download RSVPs.'
 
 ARG_DEFINITIONS = {
-    'DB_HOST': 'Host for PostgreSQL connection.',
-    'DB_NAME': 'Database name.',
-    'DB_PASS': 'Pass for database connection.',
-    'DB_PORT': 'Port for database connection.',
-    'DB_SCHEMA': 'Scheam for database query.',
-    'DB_USER': 'Username for database connection.',
-    'EXTRA_WHERE': 'Anything to add to the WHERE clause in the RSVP query.',
-    'KEY': 'Key to validate.',
-    'MAX_AGE': 'Number of days a key should be considered valid.',
-    'SECRET': 'Secret to use for validation.',
+    'KEY': 'Key to validate.'
 }
 
-REQUIRED_ARGS = [
-    'DB_HOST', 'DB_NAME', 'DB_PASS', 'DB_PORT', 'DB_USER', 'KEY', 'MAX_AGE',
-    'SECRET', 
-]
+REQUIRED_ARGS = ['KEY']
 
 
 def main(args):
-    key = validate_key.main(args)
+    script_settings = get_secret('ak-partner-rsvp')
+    db_settings = get_secret('redshift-admin')
+    db_schema = script_settings['DB_SCHEMA']
+    extra_where = script_settings['EXTRA_WHERE'] or ''
+
+    key = validate_key.main(args, script_settings)
+
     if key.get('valid', False):
         connection = psycopg2.connect(
-            host=args.DB_HOST,
-            port=args.DB_PORT,
-            user=args.DB_USER,
-            password=args.DB_PASS,
-            database=args.DB_NAME
+            host=db_settings['host'],
+            port=db_settings['port'],
+            user=db_settings['username'],
+            password=db_settings['password'],
+            database=db_settings['dbName']
         )
         cursor = connection.cursor(
             cursor_factory=psycopg2.extras.RealDictCursor
         )
+
         query = """
         SELECT
             u.email, u.first_name, u.middle_name, u.last_name, u.state, u.city,
@@ -56,13 +52,13 @@ def main(args):
         %s
         AND a.source = %s
         GROUP BY 1,2,3,4,5,6,7""" % (
-                    args.DB_SCHEMA,
-                    args.DB_SCHEMA,
-                    args.DB_SCHEMA,
-                    args.DB_SCHEMA,
-                    args.DB_SCHEMA,
+                    db_schema,
+                    db_schema,
+                    db_schema,
+                    db_schema,
+                    db_schema,
                     '%s',
-                    args.EXTRA_WHERE,
+                    extra_where,
                     '%s'
         )
         cursor.execute(query, (key.get('campaign', ''), key.get('source', '')))

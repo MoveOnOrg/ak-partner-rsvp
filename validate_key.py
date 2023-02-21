@@ -1,29 +1,32 @@
 from datetime import datetime, timedelta
 import hashlib
-
 from pywell.entry_points import run_from_cli, run_from_api_gateway
-
+from pywell.secrets_manager import get_secret
 
 DESCRIPTION = 'Validate a download key.'
 
 ARG_DEFINITIONS = {
-    'KEY': 'Key to validate.',
-    'MAX_AGE': 'Number of days a key should be considered valid.',
-    'SECRET': 'Secret to use for validation.'
+    'KEY': 'Key to validate.'
 }
 
-REQUIRED_ARGS = ['KEY', 'MAX_AGE', 'SECRET']
+REQUIRED_ARGS = ['KEY']
 
 
-def main(args):
+def main(args, script_settings={}):
+    if not script_settings:
+        script_settings = get_secret('ak-partner-rsvp')
+    key_hash_secret = script_settings['KEY_HASH_SECRET']
+    max_age = int(script_settings['MAX_AGE'] or 2)
+
     # If key doesn't have enough parts, it's invalid.
     if len(args.KEY.split('.')) != 5:
         return {'valid': False}
     [key_created, age, source, campaign, hash] = args.KEY.split('.')
     m = hashlib.sha256()
+
     m.update(
         (
-            '%s.%s.%s.%s.%s' % (key_created, age, source, campaign, args.SECRET)
+            f'{key_created}.{age}.{source}.{campaign}.{key_hash_secret}'
         ).encode('utf-8')
     )
     hash_check = m.hexdigest()
@@ -31,7 +34,7 @@ def main(args):
     if hash_check != hash:
         return {'valid': False}
     # If key age is too big, it's invalid.
-    if int(age) > args.MAX_AGE:
+    if int(age) > max_age:
         return {'valid': False}
     # If key was created more than age days ago, it's invalid.
     key_created_min = (datetime.now() - timedelta(days=int(age))).strftime('%Y-%m-%d')
