@@ -16,17 +16,17 @@ def main(args, script_settings={}):
     if not script_settings:
         script_settings = get_secret('ak-partner-rsvp')
     key_hash_secret = script_settings['KEY_HASH_SECRET']
-    max_age = int(script_settings['MAX_AGE'] or 2)
+    max_age = int(script_settings['MAX_AGE'] or 14)
 
     # If key doesn't have enough parts, it's invalid.
-    if len(args.KEY.split('.')) != 5:
+    if len(args.KEY.split('.')) != 6:
         return {'valid': False}
-    [key_created, age, source, campaign, hash] = args.KEY.split('.')
+    [key_created, age, source, campaign_id, export_type, hash] = args.KEY.split('.')
     m = hashlib.sha256()
 
     m.update(
         (
-            f'{key_created}.{age}.{source}.{campaign}.{key_hash_secret}'
+            f'{key_created}.{age}.{source}.{campaign_id}.{export_type}.{key_hash_secret}'
         ).encode('utf-8')
     )
     hash_check = m.hexdigest()
@@ -41,13 +41,14 @@ def main(args, script_settings={}):
     if key_created_min > key_created:
         return {'valid': False}
     # Otherwise, it's a valid key. Note: valid doesn't mean it will have any
-    # results for the source and campaign. We don't check that until export.
+    # results for the source and campaign id. We don't check that until export.
     return {
         'valid': True,
         'date': key_created,
         'age': age,
         'source': source,
-        'campaign': campaign
+        'campaign_id': campaign_id,
+        'export_type': export_type
     }
 
 
