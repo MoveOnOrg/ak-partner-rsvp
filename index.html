@@ -22,7 +22,7 @@
         <div class="col-md-12 mb-5">
           <div id="content-heading" class="mt-5 mb-3 row">
             <div class="col-md-12">
-              <h1 class="text-align-center">MoveOn Event Partner Signups Export</h1>
+              <h1 class="text-align-center">MoveOn Event Partner Data Export</h1>
               <div class="mt-3">
                 <p>If you have an export key, enter it below. If you do not yet have a key, please reach out to your MoveOn contact to get one.</p>
               </div>
@@ -51,7 +51,7 @@
                   <p v-if="false">Loading...</p>
                   <submit-button
                     v-bind:is-disabled="key.length < 5"
-                    prompt="Export Signups"
+                    prompt="Export Data"
                     @submit-button-click="formSubmit"
                   ></submit-button>
                 </div>
