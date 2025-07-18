@@ -51,8 +51,14 @@ def main(args):
                 p.user__postal_code AS zip,
                 p.referrer__utm_source AS utm_source
             FROM %s.participations p
-            JOIN %s.events e ON (e.id=p.event_id AND e.event_campaign_id = %s)
-            WHERE LOWER(p.referrer__utm_source) = %s
+            JOIN %s.events e ON (e.id = p.event_id AND e.event_campaign_id = %s)
+            WHERE
+                LOWER(p.referrer__utm_source) IN (
+                    SELECT LOWER(source_code::TEXT)
+                    FROM
+                        (SELECT SPLIT_TO_ARRAY(%s, '~') AS code) AS s,
+                        s.code AS source_code
+                )
                 %s
             ORDER BY 1,3,5""" % (
                 db_schema,
@@ -76,7 +82,12 @@ def main(args):
             FROM %s.events e
             WHERE
                 e.event_campaign_id = %s
-                AND LOWER(e.referrer__utm_source) = %s
+                AND LOWER(e.referrer__utm_source) IN (
+                    SELECT LOWER(source_code::TEXT)
+                    FROM
+                        (SELECT SPLIT_TO_ARRAY(%s, '~') AS code) AS s,
+                        s.code AS source_code
+                )
                 AND e.deleted_date IS NULL
                 %s
             ORDER BY 1,3,5""" % (
@@ -85,6 +96,34 @@ def main(args):
                 '%s',
                 extra_where
             )
+        elif (key.get('export_type') == 'custom_event_signups'):
+            # This type is for exporting the signups for a predefined set of
+            # event ids, regardless of source code.
+            query = """
+                SELECT DISTINCT
+                    e.id AS event_id,
+                    e.title AS event_title,
+                    p.created_date AS rsvp_date,
+                    p.status AS rsvp_status,
+                    p.user__email_address AS email,
+                    p.user__given_name AS first_name,
+                    p.user__family_name AS last_name,
+                    p.user__phone_number AS phone,
+                    p.user__postal_code AS zip,
+                    p.referrer__utm_source AS utm_source
+                FROM %s.participations p
+                JOIN %s.events e on (e.id = p.event_id AND e.event_campaign_id = %s)
+                WHERE
+                    e.id IN (%s)
+                    AND %s = '%s'
+                order by 1,3,5""" % (
+                    db_schema,
+                    db_schema,
+                    '%s',
+                    script_settings['CUSTOM_EVENT_IDS'],
+                    '%s',
+                    key.get('source', '')
+                )
         else:
             return False
 

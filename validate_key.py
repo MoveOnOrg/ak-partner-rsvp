@@ -37,7 +37,7 @@ def main(args, script_settings={}):
     if int(age) > max_age:
         return {'valid': False}
     # If key was created more than age days ago, it's invalid.
-    key_created_min = (datetime.now() - timedelta(days=int(age))).strftime('%Y-%m-%d')
+    key_created_min = (datetime.now() - timedelta(days=int(age))).strftime('%Y%m%d')
     if key_created_min > key_created:
         return {'valid': False}
     # Otherwise, it's a valid key. Note: valid doesn't mean it will have any
@@ -46,7 +46,7 @@ def main(args, script_settings={}):
         'valid': True,
         'date': key_created,
         'age': age,
-        'source': source,
+        'source': source,   # Multiple source codes can be joined with a tilde (~).
         'campaign_id': campaign_id,
         'export_type': export_type
     }
