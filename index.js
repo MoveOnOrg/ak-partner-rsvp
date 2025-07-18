@@ -1,4 +1,4 @@
-var apiRoot = 'https://eventpartner.moveon.org/'
+var apiRoot = 'https://eventpartners.moveon.org/'
 
 window.onload = function () {
 
