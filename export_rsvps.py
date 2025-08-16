@@ -2,6 +2,7 @@ import hashlib
 
 import psycopg2
 import psycopg2.extras
+import psycopg2.sql
 from pywell.entry_points import run_from_cli, run_from_api_gateway
 from pywell.secrets_manager import get_secret
 
@@ -20,7 +21,6 @@ def main(args):
     script_settings = get_secret('ak-partner-rsvp')
     db_settings = get_secret('redshift-admin')
     db_schema = script_settings['DB_SCHEMA']
-    extra_where = script_settings['EXTRA_WHERE'] or ''
 
     key = validate_key.main(args, script_settings)
 
@@ -37,98 +37,131 @@ def main(args):
         )
 
         query = None
-        if (key.get('export_type') == 'signups'):
-            query = """
-            SELECT DISTINCT
-                e.id AS event_id,
-                e.title AS event_title,
-                p.created_date AS rsvp_date,
-                p.status AS rsvp_status,
-                p.user__email_address AS email,
-                p.user__given_name AS first_name,
-                p.user__family_name AS last_name,
-                p.user__phone_number AS phone,
-                p.user__postal_code AS zip,
-                p.referrer__utm_source AS utm_source
-            FROM %s.participations p
-            JOIN %s.events e ON (e.id = p.event_id AND e.event_campaign_id = %s)
-            WHERE
-                LOWER(p.referrer__utm_source) IN (
-                    SELECT LOWER(source_code::TEXT)
-                    FROM
-                        (SELECT SPLIT_TO_ARRAY(%s, '~') AS code) AS s,
-                        s.code AS source_code
+        custom_event_ids = []
+        if (key.get('export_type') == 'full'):
+            # This is a combination export of hosts, signups, and unsourced
+            # data that has been split up among partner sources.
+            query = psycopg2.sql.SQL("""
+                with all_hosts_and_rsvps as (
+                    select distinct
+                        'rsvp'::text as record_type,
+                        e.id || '.' || record_type || '.' || p.user_id as eventid_recordtype_userid,
+                        p.user_id,
+                        p.created_date,
+                        e.id as event_id,
+                        e.title as event_title,
+                        p.status as rsvp_status,
+                        p.user__email_address as email,
+                        p.user__given_name as first_name,
+                        p.user__family_name as last_name,
+                        p.user__phone_number as phone,
+                        p.user__postal_code as zip,
+                        coalesce(trim(lower(p.referrer__utm_source)),'') as utm_source
+                    from {db_schema}.participations p
+                    join {db_schema}.events e
+                        on (e.id = p.event_id and e.event_campaign_id = %(campaign_id)s)
+                    join {db_schema}.organizations o
+                        on (o.id = e.organization_id)
+                    where
+                        date_trunc('day', p.created_date) <= %(event_campaign_end_date)s
+
+                    union all
+
+                    select distinct
+                        'host'::text as record_type,
+                        e.id || '.' || record_type || '.' || e.owner_id as eventid_recordtype_userid,
+                        e.owner_id as user_id,
+                        e.created_date,
+                        e.id as event_id,
+                        e.title as event_title,
+                        null as rsvp_status,
+                        e.owner__email_address as email,
+                        e.owner__given_name as first_name,
+                        e.owner__family_name as last_name,
+                        e.owner__phone_number as phone,
+                        e.owner__postal_code as zip,
+                        coalesce(trim(lower(e.referrer__utm_source)),'') as utm_source
+                    from {db_schema}.events e
+                    join {db_schema}.organizations o
+                        on (o.id = e.organization_id)
+                    where
+                        e.event_campaign_id = %(campaign_id)s
+                        and e.deleted_date is null
+                        and date_trunc('day', e.created_date) <= %(event_campaign_end_date)s
                 )
-                %s
-            ORDER BY 1,3,5""" % (
-                db_schema,
-                db_schema,
-                '%s',
-                '%s',
-                extra_where
+                select
+                    a.record_type,
+                    a.event_id,
+                    a.event_title,
+                    a.created_date,
+                    a.rsvp_status,
+                    a.email,
+                    a.first_name,
+                    a.last_name,
+                    a.phone,
+                    a.zip,
+                    a.utm_source
+                from all_hosts_and_rsvps a
+                left join {unsourced_shares_table} u
+                    on (
+                        u.eventid_recordtype_userid = a.eventid_recordtype_userid
+                        and u.event_campaign_id = %(campaign_id)s
+                    )
+                where
+                    a.utm_source in (
+                        select lower(source_code::text)
+                        from
+                            (select split_to_array(%(source)s, '~') as code) as s,
+                            s.code as source_code
+                    )
+                    or
+                    u.shared_with_source in (
+                        select lower(source_code::text)
+                        from
+                            (select split_to_array(%(source)s, '~') as code) as s,
+                            s.code as source_code
+                    )
+                order by a.utm_source desc, u.shared_with_source, a.record_type, a.created_date
+            """).format(
+                db_schema=psycopg2.sql.Identifier(db_schema),
+                unsourced_shares_table=psycopg2.sql.Identifier(
+                    script_settings['UNSOURCED_SHARES_SCHEMA'],
+                    script_settings['UNSOURCED_SHARES_TABLE'],
+                ),
             )
-        elif (key.get('export_type') == 'hosts'):
-            query = """
-            SELECT DISTINCT
-                e.id AS event_id,
-                e.title AS event_title,
-                e.created_date,
-                e.owner__email_address AS email,
-                e.owner__given_name AS first_name,
-                e.owner__family_name AS last_name,
-                e.owner__phone_number AS phone,
-                e.owner__postal_code AS zip,
-                e.referrer__utm_source AS utm_source
-            FROM %s.events e
-            WHERE
-                e.event_campaign_id = %s
-                AND LOWER(e.referrer__utm_source) IN (
-                    SELECT LOWER(source_code::TEXT)
-                    FROM
-                        (SELECT SPLIT_TO_ARRAY(%s, '~') AS code) AS s,
-                        s.code AS source_code
-                )
-                AND e.deleted_date IS NULL
-                %s
-            ORDER BY 1,3,5""" % (
-                db_schema,
-                '%s',
-                '%s',
-                extra_where
-            )
+
         elif (key.get('export_type') == 'custom_event_signups'):
             # This type is for exporting the signups for a predefined set of
             # event ids, regardless of source code.
-            query = """
-                SELECT DISTINCT
-                    e.id AS event_id,
-                    e.title AS event_title,
-                    p.created_date AS rsvp_date,
-                    p.status AS rsvp_status,
-                    p.user__email_address AS email,
-                    p.user__given_name AS first_name,
-                    p.user__family_name AS last_name,
-                    p.user__phone_number AS phone,
-                    p.user__postal_code AS zip,
-                    p.referrer__utm_source AS utm_source
-                FROM %s.participations p
-                JOIN %s.events e on (e.id = p.event_id AND e.event_campaign_id = %s)
-                WHERE
-                    e.id IN (%s)
-                    AND %s = '%s'
-                order by 1,3,5""" % (
-                    db_schema,
-                    db_schema,
-                    '%s',
-                    script_settings['CUSTOM_EVENT_IDS'],
-                    '%s',
-                    key.get('source', '')
-                )
+            custom_event_ids = [int(num.strip()) for num in script_settings['CUSTOM_EVENT_IDS'].split(',')]
+            query = psycopg2.sql.SQL("""
+                select distinct
+                    e.id as event_id,
+                    e.title as event_title,
+                    p.created_date as rsvp_date,
+                    p.status as rsvp_status,
+                    p.user__email_address as email,
+                    p.user__given_name as first_name,
+                    p.user__family_name as last_name,
+                    p.user__phone_number as phone,
+                    p.user__postal_code as zip,
+                    p.referrer__utm_source as utm_source
+                from {db_schema}.participations p
+                join {db_schema}.events e
+                    on (e.id = p.event_id and e.event_campaign_id = %(campaign_id)s)
+                where e.id in %(custom_event_ids)s
+                order by 1,3,5
+            """).format(db_schema=psycopg2.sql.Identifier(db_schema))
+
         else:
             return False
 
-        # return query
-        cursor.execute(query, (key.get('campaign_id', ''), key.get('source', '')))
+        cursor.execute(query, {
+            'campaign_id': key.get('campaign_id', ''),
+            'custom_event_ids': tuple(custom_event_ids),
+            'event_campaign_end_date': script_settings['EVENT_CAMPAIGN_END_DATE'],
+            'source': key.get('source', ''),
+        })
         return [dict(row) for row in cursor.fetchall()]
     else:
         return False
