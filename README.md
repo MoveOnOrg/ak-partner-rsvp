@@ -45,3 +45,12 @@ Given an Airtable base containing a list of partners, the included `gen_secrets_
 An automation can be set up in Airtable to send an email to the partner when the column containing their Onetime Secret link is filled in by the script.
 
 The script uses AWS Secrets Manager for the Airtable configuration (see the comments in the script for the list of expected keys) and [Parsons](https://www.parsonsproject.org/) for connecting to the Airtable and Onetime Secret APIs.
+
+To avoid installing/loading the full Parsons dependencies, set the following environment variables before installing the requirements and running the script:
+
+```
+export PIP_NO_BINARY=parsons
+export PARSONS_LIMITED_DEPENDENCIES=true
+```
+
+See the [Parsons documentation](https://move-coop.github.io/parsons/html/stable/index.html#integrating-parsons) for details.

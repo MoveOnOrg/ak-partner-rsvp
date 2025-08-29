@@ -1,13 +1,9 @@
 from datetime import datetime
 import hashlib
 import logging
-import os
 
 from pywell.secrets_manager import get_secret
 from pywell.entry_points import run_from_cli
-
-# MUST be above all parsons imports to avoid full parsons dependencies
-os.environ["PARSONS_SKIP_IMPORT_ALL"] = "1"
 
 from parsons.etl.table import Table  # noqa: E402
 from parsons.utilities.api_connector import APIConnector  # noqa: E402
