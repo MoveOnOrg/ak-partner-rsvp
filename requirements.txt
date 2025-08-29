@@ -8,3 +8,6 @@ psycopg2-binary==2.9.10
 
 botocore==1.34.22
 boto3==1.34.22
+
+# This is only needed for the gen_secrets_for_airtable.py script.
+parsons[airtable]==5.1.0
