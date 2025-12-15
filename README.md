@@ -21,3 +21,15 @@ The scripts use AWS Secrets Manager, with a record called `ak-partner-rsvp` to s
 The API can be deployed using [Zappa](https://github.com/Miserlou/Zappa) with the provided zappa_settings.yml.template (copied to zappa_settings.yml).
 
 Each individual script has its own zappa_settings.py file, named zappa_settings_export.py and zappa_settings_validate.py. You'll most likely need to rename these to deploy.
+
+## Setting up your pyenv virtual environment for local development on MacOS
+
+- You only need to run this one time:
+  - Make sure you have followed the instructions on setting up your pyenv env vars:
+    - <https://github.com/pyenv/pyenv?tab=readme-ov-file#b-set-up-your-shell-environment-for-pyenv>
+  - Set the local python version, `pyenv local 3.12`
+  - Initialize the pyenv virtualenv and add the path to your repository's `.python-version` file:
+  `pyenv virtualenv 3.12 ak-partner-rsvp-venv && pyenv virtualenvs --bare --skip-aliases | grep ak-partner-rsvp-venv | > .python-version`
+    - This enables auto-activation of virtual environments, more on this: <https://github.com/pyenv/pyenv-virtualenv?tab=readme-ov-file#activate-virtualenv>.
+  - Confirm that this worked by navigating to this project directory in your MacOS terminal. The virtualenv should auto-activate.
+- Run `pip install -r requirements.txt && pip install -r dev_requirements.txt`

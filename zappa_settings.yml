@@ -9,7 +9,7 @@ validate:
   memory_size: 2048
   project_name: ak-partner-rsvp
   role_name: test_python
-  runtime: python3.9
+  runtime: python3.12
   s3_bucket: zappa-west1
   timeout_seconds: 300
   vpc_config:
@@ -27,7 +27,7 @@ export:
   memory_size: 2048
   project_name: ak-partner-rsvp
   role_name: test_python
-  runtime: python3.9
+  runtime: python3.12
   s3_bucket: zappa-west1
   timeout_seconds: 300
   vpc_config:
